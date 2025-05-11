@@ -1,5 +1,5 @@
-// src/firebase.js
-import { initializeApp, getApps } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import { getApps, initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -12,8 +12,8 @@ const firebaseConfig = {
     measurementId: "G-124MCMCKTR"
 };
 
-// ✅ Check to avoid duplicate initialization
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const auth = getAuth(app);
+const db = getFirestore(app);
 
-export { auth };
+export { auth, db };
