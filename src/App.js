@@ -1,20 +1,23 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Signup from './Signup';
-import Login from './Login';
+import AuthPage from './AuthPage';
 import Dashboard from './Dashboard';
-import QRScanner from './QRScanner';
-import QRCodeGenerator from './QRCodeGenerator';
-
+import AdminDashboard from './AdminDashboard';
+import AttendanceChart from './AttendanceChart';
+import AttendanceSession from './AttendanceSession';
+import ScanQRCode from './ScanQRCode';
 function App() {
     return (
         <Router>
             <Routes>
-                <Route path="/" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/" element={<AuthPage/>} />
+                <Route path="/signup" element={<AuthPage/>} />
                 <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/qr" element={<QRScanner />} />
-                <Route path="/generate" element={<QRCodeGenerator />} />
+
+                <Route path="/attendance/chart" element={<AttendanceChart />} />
+                <Route path="/attendance/session/:sessionId" element={<AttendanceSession />} />
+                <Route path="/qr" element={<ScanQRCode />} />
             </Routes>
         </Router>
     );
