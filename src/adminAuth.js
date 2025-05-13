@@ -1,1 +1,0 @@
-export const adminPassword = "STUCO25Attendance!";
