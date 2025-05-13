@@ -6,6 +6,8 @@ import AdminDashboard from './AdminDashboard';
 import AttendanceChart from './AttendanceChart';
 import AttendanceSession from './AttendanceSession';
 import ScanQRCode from './ScanQRCode';
+import ResetPassword from './ResetPassword';
+
 function App() {
     return (
         <Router>
@@ -18,6 +20,7 @@ function App() {
                 <Route path="/attendance/chart" element={<AttendanceChart />} />
                 <Route path="/attendance/session/:sessionId" element={<AttendanceSession />} />
                 <Route path="/qr" element={<ScanQRCode />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
             </Routes>
         </Router>
     );

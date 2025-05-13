@@ -135,35 +135,41 @@ const AuthPage = () => {
         </button>
       </form>
 
-      <div style={{ marginTop: 16 }}>
+      <div style={{marginTop: 16}}>
+        <button
+            className="link-btn"
+            onClick={() => navigate('/reset-password')}
+        >
+          Forgot Password?
+        </button>
         {mode === 'login' ? (
-          <>
-            <span style={{color:'white'}}>Need an account? </span>
-            <button
-              className="link-btn"
-              onClick={() => {
-                setMode('signup');
-                setError('');
-                setSuccess('');
-              }}
-            >
-              Sign Up
-            </button>
-          </>
+            <>
+              <span style={{color: 'white'}}>Need an account? </span>
+              <button
+                  className="link-btn"
+                  onClick={() => {
+                    setMode('signup');
+                    setError('');
+                    setSuccess('');
+                  }}
+              >
+                Sign Up
+              </button>
+            </>
         ) : (
-          <>
-            <span style={{color:'white'}}>Already have one? </span>
-            <button
-              className="link-btn"
-              onClick={() => {
-                setMode('login');
-                setError('');
-                setSuccess('');
-              }}
-            >
-              Log In
-            </button>
-          </>
+            <>
+              <span style={{color: 'white'}}>Already have one? </span>
+              <button
+                  className="link-btn"
+                  onClick={() => {
+                    setMode('login');
+                    setError('');
+                    setSuccess('');
+                  }}
+              >
+                Log In
+              </button>
+            </>
         )}
       </div>
     </div>
