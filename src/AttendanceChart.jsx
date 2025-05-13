@@ -10,6 +10,13 @@ const AttendanceChart = () => {
   const [sessions, setSessions] = useState([]);
 
   useEffect(() => {
+    const storedAuth = localStorage.getItem('isAuthenticated');
+    if (storedAuth !== 'true') {
+      navigate('/'); // Redirect to login if not authenticated
+    }
+  }, [navigate]);
+
+  useEffect(() => {
     const fetchAll = async () => {
       // 1️⃣ Fetch sessions
       const sessSnap = await getDocs(collection(db, 'attendanceSessions'));

@@ -70,7 +70,7 @@ const AuthPage = () => {
           <input
             type="text"
             value={username}
-            placeholder="just the name, no @stuco.local"
+            placeholder="official exeter username, no @exeter.edu"
             onChange={e => setUsername(e.target.value)}
             required
             disabled={!!success}
