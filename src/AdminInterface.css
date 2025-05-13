@@ -116,3 +116,94 @@
     height: 76vw;
   }
 }
+
+.styled-input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+  display: block;
+}
+
+.styled-btn {
+  background-color: #007bff;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.styled-btn:hover {
+  background-color: #0056b3;
+}
+
+.proxy-requests-container {
+  margin-top: 2rem;
+}
+
+.proxy-request-bubble {
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background-color: #f9f9f9;
+}
+
+.proxy-form .input-group {
+  margin-bottom: 1rem;
+}
+
+.proxy-form .input-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.proxy-form .input-group input,
+.proxy-form .input-group select,
+.proxy-form .input-group textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.proxy-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.accept-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.accept-btn:hover {
+  background-color: #218838;
+}
+
+.reject-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.reject-btn:hover {
+  background-color: #c82333;
+}
+
+.proxy {
+  background-color: #ffeb3b;
+  color: #000;
+}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from './firebase';
-import { collection, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, addDoc, doc, updateDoc } from 'firebase/firestore';
 import './AttendanceChart.css';
 
 const AttendanceChart = () => {
@@ -62,7 +62,10 @@ const AttendanceChart = () => {
       const batch = writeBatch(db);
 
       userSnap.docs.forEach(doc => {
-        batch.update(doc.ref, { absences: 0 });
+        const userData = doc.data();
+        if (userData.absences !== 0) { // Only reset if absences are not already 0
+          batch.update(doc.ref, { absences: 0 });
+        }
       });
 
       await batch.commit();
@@ -74,9 +77,50 @@ const AttendanceChart = () => {
     }
   };
 
+  const handleEdit = async (user) => {
+    const adminUsername = localStorage.getItem('username') || 'Unknown Admin'; // Get admin username
+    const newAbsences = prompt(
+      `Edit absences for ${user.username || user.id}:`,
+      user.absences
+    );
+    if (newAbsences === null || isNaN(newAbsences)) return;
+
+    try {
+      const absencesNumber = parseInt(newAbsences, 10);
+      const userRef = doc(db, 'users', user.id);
+      await updateDoc(userRef, { absences: absencesNumber });
+
+      const editLog = {
+        userId: user.id,
+        username: user.username || "Unknown",
+        adminUsername, // Log the admin username
+        timestamp: new Date().toISOString(), // Use ISO string for consistent formatting
+        description: `Admin (${adminUsername}) updated absences for user ${user.id} (${user.username || "Unknown"}) to ${absencesNumber}.`
+      };
+      await addDoc(collection(db, 'manualEdits'), editLog);
+
+      alert("Absences updated and edit logged successfully.");
+      setUsers(prevUsers =>
+        prevUsers.map(u =>
+          u.id === user.id ? { ...u, absences: absencesNumber } : u
+        )
+      );
+    } catch (error) {
+      console.error("Error updating absences:", error);
+      alert("Failed to update absences. Please try again.");
+    }
+  };
+
   return (
     <div className="attendance-container">
       <h2 className="attendance-title">Attendance Chart</h2>
+      <button
+        className="admin-btn log-btn"
+        onClick={() => navigate('/edit-logs')}
+        style={{ float: 'none', marginBottom: '1rem', display: 'block', margin: '0 auto' }}
+      >
+        View Edit Logs
+      </button>
       <button
         className="admin-btn reset-btn"
         onClick={resetAllAbsences}
@@ -113,15 +157,34 @@ const AttendanceChart = () => {
                 <tr key={user.id}>
                   <td className={`name-cell ${nameClass}`}>
                     {user.id} ({user.absences}) {/* Display absences */}
+                    <button
+                      className="edit-btn"
+                      onClick={() => handleEdit(user)}
+                      style={{
+                        float: 'right', // Align to the right
+                        background: 'none', // Subtle styling
+                        border: 'none',
+                        color: '#007BFF', // Theme color
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      Edit
+                    </button>
                   </td>
                   {sessions.map(sess => {
-                    const present = user.attendance.includes(sess.id);
+                    const attendanceValue = user.attendance.find(a => a.startsWith(sess.id));
+                    const isProxy = attendanceValue?.includes('(Proxy)');
+                    const present = attendanceValue === sess.id;
+
                     return (
                       <td
                         key={sess.id}
-                        className={present ? 'present' : 'absent'}
+                        className={isProxy ? 'proxy' : present ? 'present' : 'absent'}
+                        style={isProxy ? { color: 'yellow' } : {}}
                       >
-                        {present ? 'Present' : 'Absent'}
+                        {isProxy ? '(Proxy)' : present ? 'Present' : 'Absent'}
                       </td>
                     );
                   })}

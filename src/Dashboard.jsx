@@ -97,6 +97,14 @@ const Dashboard = () => {
       >
         Scan QR to Check In
       </button>
+
+      {/* <button
+        className="admin-btn"
+        onClick={() => navigate('/proxy-request')}
+        style={{ marginTop: '1rem' }} // Added margin-top
+      >
+        Proxy Request Form
+      </button>  */}
     </div>
   );
 };
