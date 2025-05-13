@@ -55,3 +55,10 @@
     font-weight: bold;
   }
   
+  /* Color-code the name cell based on absences */
+.absences-green { color: #28a745; }   /* green */
+.absences-yellow { color: #ffc107; }  /* yellow */
+.absences-red { color: #dc3545; }     /* red */
+
+/* Optional: ensure the name-cell retains any existing styles */
+.name-cell { font-weight: bold; /* or your preferred styles */ }

@@ -1,7 +1,7 @@
 // src/Dashboard.jsx
 import React, { useEffect, useState } from 'react';
 import { db, auth } from './firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import './AdminInterface.css';
 
@@ -9,11 +9,12 @@ const Dashboard = () => {
   const [attendanceDates, setAttendanceDates] = useState([]);
   const [absences, setAbsences] = useState(0);
   const [username, setUsername] = useState('');
+  const [hasOpenSession, setHasOpenSession] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
-      // redirect if not logged in
+      // Redirect if not logged in
       if (!auth.currentUser) {
         navigate('/');
         return;
@@ -23,45 +24,45 @@ const Dashboard = () => {
       const uname = email.split('@')[0];
       setUsername(uname);
 
-      // get the user doc
+      // 1️⃣ Load user record
       const userRef = doc(db, 'users', uname);
       const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        setAbsences(userData.absences ?? 0);
+        const sessionIds = userData.attendance || [];
 
-      if (!userSnap.exists()) {
-        // no user record → treat as zero
-        setAbsences(0);
-        setAttendanceDates([]);
-        return;
-      }
-
-      const userData = userSnap.data();
-      setAbsences(userData.absences ?? 0);
-      const sessionIds = userData.attendance || [];
-
-      // fetch each session to get its date
-      const dates = await Promise.all(
-        sessionIds.map(async sessionId => {
-          const sessRef = doc(db, 'attendanceSessions', sessionId);
-          const sessSnap = await getDoc(sessRef);
-          if (!sessSnap.exists()) return null;
-
-          const sessData = sessSnap.data();
-          // session.date if you used serverTimestamp(), otherwise fall back to createdAt
-          const raw = sessData.date ?? sessData.createdAt;
-          const dateObj =
-            typeof raw?.toDate === 'function'
+        // fetch each session's date
+        const dates = await Promise.all(
+          sessionIds.map(async sessionId => {
+            const sessSnap = await getDoc(doc(db, 'attendanceSessions', sessionId));
+            if (!sessSnap.exists()) return null;
+            const sessData = sessSnap.data();
+            const raw = sessData.date ?? sessData.createdAt;
+            return typeof raw?.toDate === 'function'
               ? raw.toDate()
               : new Date(raw);
-          return dateObj;
-        })
-      );
+          })
+        );
 
-      // filter out any nulls and sort chronologically
-      setAttendanceDates(
-        dates
-          .filter(d => d instanceof Date && !isNaN(d))
-          .sort((a, b) => a - b)
+        setAttendanceDates(
+          dates
+            .filter(d => d instanceof Date && !isNaN(d))
+            .sort((a, b) => a - b)
+        );
+      } else {
+        // no user record → zero out
+        setAbsences(0);
+        setAttendanceDates([]);
+      }
+
+      // 2️⃣ Check for an active session
+      const q = query(
+        collection(db, 'attendanceSessions'),
+        where('open', '==', true)
       );
+      const sessSnap = await getDocs(q);
+      setHasOpenSession(!sessSnap.empty);
     };
 
     fetchData();
@@ -87,6 +88,12 @@ const Dashboard = () => {
       <button
         className="admin-btn"
         onClick={() => navigate('/qr')}
+        disabled={!hasOpenSession}
+        title={
+          hasOpenSession
+            ? 'Scan QR to Check In'
+            : 'No active attendance session right now'
+        }
       >
         Scan QR to Check In
       </button>

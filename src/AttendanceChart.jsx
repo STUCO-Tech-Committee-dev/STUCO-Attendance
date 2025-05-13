@@ -18,10 +18,9 @@ const AttendanceChart = () => {
           const data = docSnap.data();
           // prefer a real Timestamp in `date`, fall back to `createdAt`
           const raw = data.date ?? data.createdAt;
-          const dateObj =
-            raw?.toDate   // Firestore Timestamp?
-              ? raw.toDate()
-              : new Date(raw); // JS millisecond timestamp
+          const dateObj = raw?.toDate
+            ? raw.toDate()
+            : new Date(raw);
           return {
             id: docSnap.id,
             date: dateObj,
@@ -35,6 +34,7 @@ const AttendanceChart = () => {
       const userSnap = await getDocs(collection(db, 'users'));
       const userData = userSnap.docs.map(docSnap => ({
         id: docSnap.id,
+        attendance: docSnap.data().attendance || [],
         ...docSnap.data()
       }));
       setUsers(userData);
@@ -52,35 +52,49 @@ const AttendanceChart = () => {
       >
         ← Back
       </button>
+
       <div className="attendance-table-wrapper">
         <table className="attendance-table">
           <thead>
             <tr>
               <th>Name</th>
               {sessions.map(sess => (
-                <th key={sess.id}>
-                  {sess.date.toLocaleDateString()}
-                </th>
+                <th key={sess.id}>{sess.date.toLocaleDateString()}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {users.map(user => (
-              <tr key={user.id}>
-                <td className="name-cell">{user.id}</td>
-                {sessions.map(sess => {
-                  const present = user.attendance?.includes(sess.id);
-                  return (
-                    <td
-                      key={sess.id}
-                      className={present ? 'present' : 'absent'}
-                    >
-                      {present ? 'Present' : 'Absent'}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+            {users.map(user => {
+              // calculate absences
+              const presentCount = user.attendance.filter(id =>
+                sessions.some(s => s.id === id)
+              ).length;
+              const absenceCount = sessions.length - presentCount;
+              // choose color class
+              let nameClass = '';
+              if (absenceCount <= 1) nameClass = 'absences-green';
+              else if (absenceCount === 2) nameClass = 'absences-yellow';
+              else nameClass = 'absences-red';
+
+              return (
+                <tr key={user.id}>
+                  <td className={`name-cell ${nameClass}`}>  
+                    {user.id} ({absenceCount})
+                  </td>
+                  {sessions.map(sess => {
+                    const present = user.attendance.includes(sess.id);
+                    return (
+                      <td
+                        key={sess.id}
+                        className={present ? 'present' : 'absent'}
+                      >
+                        {present ? 'Present' : 'Absent'}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
