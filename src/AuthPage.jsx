@@ -136,12 +136,12 @@ const AuthPage = () => {
       </form>
 
       <div style={{marginTop: 16}}>
-        <button
-            className="link-btn"
-            onClick={() => navigate('/reset-password')}
-        >
-          Forgot Password?
-        </button>
+        {/*<button*/}
+        {/*    className="link-btn"*/}
+        {/*    onClick={() => navigate('/reset-password')}*/}
+        {/*/!*>*!/*/}
+        {/*  Forgot Password?*/}
+        {/*</button>*/}
         {mode === 'login' ? (
             <>
               <span style={{color: 'white'}}>Need an account? </span>

@@ -26,7 +26,6 @@ function App() {
                 <Route path="/qr" element={<ScanQRCode/>}/>
                 <Route path="/edit-logs" element={<EditLogs/>}/>
                 <Route path="/proxy-request" element={<ProxyRequest/>}/>
-                <Route path="/reset-password" element={<ResetPassword/>}/>
             </Routes>
         </Router>
     );
