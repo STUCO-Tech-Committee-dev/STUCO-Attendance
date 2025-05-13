@@ -59,12 +59,9 @@
   /* src/AdminInterface.css */
 
 .qr-container {
-  width: 100%;
-  max-width: 400px;
-  height: 300px;         /* give it a real height */
+  width: 100%;      /* give it a real height */
   margin: 1rem auto;
   position: relative;
-  background: #000;      /* optional: black behind video */
 }
 
 /* make sure the video tag fills it */

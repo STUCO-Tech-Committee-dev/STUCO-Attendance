@@ -58,6 +58,31 @@ const AttendanceSession = () => {
     setSession(prev => ({ ...prev, open: false }));
   };
 
+  // abort session: delete the session and remove it from users' attendance
+  const abortSession = async () => {
+    const batch = writeBatch(db);
+
+    // delete the session
+    const sessRef = doc(db, 'attendanceSessions', sessionId);
+    batch.delete(sessRef);
+
+    // fetch all users
+    const usersSnap = await getDocs(collection(db, 'users'));
+    usersSnap.forEach(userDoc => {
+      const data = userDoc.data();
+      const updatedAttendance = data.attendance?.filter(id => id !== sessionId) || [];
+
+      const userRef = doc(db, 'users', userDoc.id);
+      batch.update(userRef, { attendance: updatedAttendance });
+    });
+
+    // commit batch
+    await batch.commit();
+
+    // navigate back to admin dashboard
+    navigate('/admin');
+  };
+
   if (!session) return <div>Loading…</div>;
 
   // helper to format Firestore Timestamp or raw number
@@ -86,8 +111,23 @@ const AttendanceSession = () => {
             <br />
             <strong>Started:</strong> {formatDate(session.createdAt)}
           </div>
-          <button className="admin-btn" onClick={endSession}>
+          <button className="admin-btn" onClick={() => {
+            if (window.confirm("Are you sure you want to end the session? All who have not scanned the QR code will receive an absence.")) {
+              endSession();
+            }
+          }}>
             🛑 End Session
+          </button>
+          <button
+            className="admin-btn"
+            style={{ marginTop: '1.5rem' }} // Added spacing between buttons
+            onClick={() => {
+              if (window.confirm("Are you sure you want to abort the session?")) {
+                abortSession();
+              }
+            }}
+          >
+            ❌ Abort Session
           </button>
         </div>
       ) : (
