@@ -12,6 +12,14 @@ const Dashboard = () => {
   const [hasOpenSession, setHasOpenSession] = useState(false);
   const navigate = useNavigate();
 
+  const formatDate = (date) => {
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       // Redirect if not logged in
@@ -39,7 +47,11 @@ const Dashboard = () => {
             if (!sessSnap.exists()) return null;
             const sessData = sessSnap.data();
             const raw = sessData.date ?? sessData.createdAt;
-            return typeof raw?.toDate === 'function'
+
+            // Ensure raw is converted to a Date object
+            return raw instanceof Date
+              ? raw
+              : typeof raw?.toDate === 'function'
               ? raw.toDate()
               : new Date(raw);
           })
@@ -78,7 +90,7 @@ const Dashboard = () => {
       {attendanceDates.length ? (
         <ul className="attendance-list">
           {attendanceDates.map((date, idx) => (
-            <li key={idx}>{date.toLocaleDateString()}</li>
+            <li key={idx}>{formatDate(date)}</li>
           ))}
         </ul>
       ) : (
@@ -97,14 +109,6 @@ const Dashboard = () => {
       >
         Scan QR to Check In
       </button>
-
-      {/* <button
-        className="admin-btn"
-        onClick={() => navigate('/proxy-request')}
-        style={{ marginTop: '1rem' }} // Added margin-top
-      >
-        Proxy Request Form
-      </button>  */}
     </div>
   );
 };

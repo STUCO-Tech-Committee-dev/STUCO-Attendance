@@ -8,7 +8,7 @@ import AttendanceSession from "./AttendanceSession";
 import ScanQRCode from "./ScanQRCode";
 import EditLogs from "./EditLogs";
 import ProxyRequest from "./ProxyRequest";
-import ResetPassword from "./ResetPassword";
+//import ResetPassword from "./ResetPassword";
 
 function App() {
     return (

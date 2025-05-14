@@ -23,9 +23,11 @@ const AttendanceChart = () => {
       const sessData = sessSnap.docs
         .map(docSnap => {
           const data = docSnap.data();
-          // prefer a real Timestamp in `date`, fall back to `createdAt`
+          // Ensure raw is converted to a Date object
           const raw = data.date ?? data.createdAt;
-          const dateObj = raw?.toDate
+          const dateObj = raw instanceof Date
+            ? raw
+            : typeof raw?.toDate === 'function'
             ? raw.toDate()
             : new Date(raw);
           return {
@@ -141,7 +143,15 @@ const AttendanceChart = () => {
             <tr>
               <th>Name</th>
               {sessions.map(sess => (
-                <th key={sess.id}>{sess.date.toLocaleDateString()}</th>
+                <th key={sess.id}>
+                  {sess.date instanceof Date && !isNaN(sess.date)
+                    ? sess.date.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                      })
+                    : 'Invalid Date'}
+                </th>
               ))}
             </tr>
           </thead>
