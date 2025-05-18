@@ -8,7 +8,7 @@ import AttendanceSession from "./AttendanceSession";
 import ScanQRCode from "./ScanQRCode";
 import EditLogs from "./EditLogs";
 import ProxyRequest from "./ProxyRequest";
-//import ResetPassword from "./ResetPassword";
+import ProxyManagement from './ProxyManagement';
 
 function App() {
     return (
@@ -26,6 +26,7 @@ function App() {
                 <Route path="/qr" element={<ScanQRCode/>}/>
                 <Route path="/edit-logs" element={<EditLogs/>}/>
                 <Route path="/proxy-request" element={<ProxyRequest/>}/>
+                <Route path="/admin/proxies" element={<ProxyManagement />} />
             </Routes>
         </Router>
     );
