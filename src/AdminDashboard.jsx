@@ -67,16 +67,16 @@ const AdminDashboard = () => {
     return (
         <div className="login-container">
           <h2 className="admin-title">Admin Login</h2>
-          <div className="input-group" style={{ justifyContent: 'center', marginBottom: '1rem' }}>
+          <div className="input-group">
             <input
                 type="text"
-                placeholder="Enter Admin Username"
+                placeholder="Admin Name"
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
                 className="admin-input styled-input"
             />
           </div>
-          <div className="input-group" style={{ justifyContent: 'center', marginBottom: '1rem' }}>
+          <div className="input-group">
             <input
                 type="password"
                 placeholder="Enter Admin Password"
@@ -84,11 +84,13 @@ const AdminDashboard = () => {
                 onChange={(e) => setPasswordInput(e.target.value)}
                 className="admin-input styled-input"
             />
+          </div>
+          <div className="button-group">
             <button className="admin-btn styled-btn" onClick={handleLogin}>
               Login
             </button>
           </div>
-          {error && <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>}
+          {error && <p className="error-message">{error}</p>}
         </div>
     );
   }
@@ -97,25 +99,25 @@ const AdminDashboard = () => {
       <div className="admin-container">
         <h2 className="admin-title">Admin Dashboard</h2>
 
-        <div className="input-group" style={{ justifyContent: 'center', marginBottom: '1rem' }}>
-          <button className="admin-btn" onClick={startSession} disabled={!!currentSession}>
+        <div className="dashboard-group">
+          <button className="admin-btn styled-btn" onClick={startSession} disabled={!!currentSession}>
             {currentSession ? 'Session In Progress' : 'Start New Session'}
           </button>
           {currentSession && (
-              <button className="admin-btn" onClick={goToCurrentSession}>
+              <button className="admin-btn styled-btn" onClick={goToCurrentSession}>
                 Go to Current Session
               </button>
           )}
         </div>
 
-        <div className="input-group" style={{ justifyContent: 'center', marginBottom: '1rem' }}>
-          <button className="admin-btn" onClick={() => navigate('/attendance/chart')}>
+        <div className="dashboard-group">
+          <button className="admin-btn styled-btn" onClick={() => navigate('/attendance/chart')}>
             View Total Attendance
           </button>
         </div>
 
-        <div className="input-group" style={{ justifyContent: 'center', marginBottom: '1rem' }}>
-          <button className="admin-btn" onClick={() => navigate('/admin/proxies')}>
+        <div className="dashboard-group">
+          <button className="admin-btn styled-btn" onClick={() => navigate('/admin/proxies')}>
             Manage Proxy Requests
           </button>
         </div>

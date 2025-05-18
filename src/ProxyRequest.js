@@ -1,43 +1,55 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Added import
-import { db, auth } from './firebase';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
-import './AdminInterface.css';
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // Added import
+import { db, auth } from "./firebase";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import "./AdminInterface.css";
 
 const ProxyRequest = () => {
   const navigate = useNavigate(); // Initialize navigate
-  const [date, setDate] = useState('');
-  const [name, setName] = useState('');
-  const [username, setUsername] = useState('');
-  const [proxy, setProxy] = useState('');
-  const [description, setDescription] = useState('');
+  const [date, setDate] = useState("");
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [proxy, setProxy] = useState("");
+  const [description, setDescription] = useState("");
   const [nonVotingMembers, setNonVotingMembers] = useState([]);
 
   useEffect(() => {
     const fetchNonVotingMembers = async () => {
-      const snap = await getDocs(collection(db, 'users'));
+      const snap = await getDocs(collection(db, "users"));
       const members = snap.docs
-        .map(doc => doc.id)
-        .filter(id => id !== auth.currentUser.email.split('@')[0]); // Exclude current user
+        .map((doc) => doc.id)
+        .filter((id) => id !== auth.currentUser.email.split("@")[0]); // Exclude current user
       setNonVotingMembers(members);
     };
 
     if (auth.currentUser) {
-      setUsername(auth.currentUser.email.split('@')[0]);
+      setUsername(auth.currentUser.email.split("@")[0]);
       fetchNonVotingMembers();
     }
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await addDoc(collection(db, 'proxyRequests'), {
-      date,
-      name,
-      username,
-      proxy,
-      description,
-    });
-    alert('Proxy request submitted successfully!');
+    try {
+      await addDoc(collection(db, "proxyRequests"), {
+        date,
+        name,
+        username,
+        proxy,
+        description,
+        createdAt: serverTimestamp(), // Ensure consistency
+      });
+      alert("Proxy request submitted successfully!");
+      navigate("/dashboard"); // Redirect after submission
+    } catch (error) {
+      console.error("Error submitting proxy request:", error);
+      alert("Failed to submit proxy request.");
+    }
   };
 
   return (
@@ -45,8 +57,8 @@ const ProxyRequest = () => {
       <h2 className="admin-title">Proxy Request Form</h2>
       <button
         className="admin-btn"
-        onClick={() => navigate('/dashboard')}
-        style={{ marginBottom: '1rem' }}
+        onClick={() => navigate("/dashboard")}
+        style={{ marginBottom: "1rem" }}
       >
         ← Back to Dashboard
       </button>

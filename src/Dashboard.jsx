@@ -80,8 +80,31 @@ const Dashboard = () => {
     fetchData();
   }, [navigate]);
 
+  const handleLogout = () => {
+    auth.signOut();
+    navigate('/');
+  };
+
   return (
     <div className="admin-container">
+      <button
+        className="logout-btn"
+        onClick={handleLogout}
+        style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          backgroundColor: '#f44336',
+          color: 'white',
+          border: 'none',
+          padding: '10px 15px',
+          borderRadius: '5px',
+          cursor: 'pointer',
+        }}
+      >
+        Log Out
+      </button>
+
       <h2 className="admin-title">Welcome, {username}</h2>
 
       <p>Total Absences: {absences}</p>
@@ -97,18 +120,27 @@ const Dashboard = () => {
         <p>No attendance records yet.</p>
       )}
 
-      <button
-        className="admin-btn"
-        onClick={() => navigate('/qr')}
-        disabled={!hasOpenSession}
-        title={
-          hasOpenSession
-            ? 'Scan QR to Check In'
-            : 'No active attendance session right now'
-        }
-      >
-        Scan QR to Check In
-      </button>
+      <div style={{ marginTop: '20px' }}>
+        <button
+          className="admin-btn"
+          onClick={() => navigate('/proxy-request')}
+          style={{ marginBottom: '1rem' }}
+        >
+          Request Proxy
+        </button>
+        <button
+          className="admin-btn"
+          onClick={() => navigate('/qr')}
+          disabled={!hasOpenSession}
+          title={
+            hasOpenSession
+              ? 'Scan QR to Check In'
+              : 'No active attendance session right now'
+          }
+        >
+          Scan QR to Check In
+        </button>
+      </div>
     </div>
   );
 };
