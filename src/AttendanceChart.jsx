@@ -1,3 +1,4 @@
+// AttendanceChart.js
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from './firebase';
@@ -10,12 +11,24 @@ import {
     updateDoc,
 } from 'firebase/firestore';
 import './AttendanceChart.css';
+import { parseCSV } from './electedMembers';
+
+const loadNameMapFromCSV = async () => {
+    const parsed = await parseCSV();
+    const nameMap = {};
+    for (const [username, data] of Object.entries(parsed)) {
+        nameMap[username] = data.name;
+    }
+    return nameMap;
+};
 
 const AttendanceChart = () => {
     const navigate = useNavigate();
     const [users, setUsers] = useState([]);
     const [sessions, setSessions] = useState([]);
+    const [nameMap, setNameMap] = useState({});
 
+    // Auth check
     useEffect(() => {
         const storedAuth = localStorage.getItem('isAuthenticated');
         if (storedAuth !== 'true') {
@@ -23,11 +36,19 @@ const AttendanceChart = () => {
         }
     }, [navigate]);
 
+    // Load data on mount
     useEffect(() => {
         const fetchAll = async () => {
-            const sessSnap = await getDocs(collection(db, 'attendanceSessions'));
-            const sessData = sessSnap.docs
-                .map(docSnap => {
+            const [sessSnap, userSnap, nameMapping] = await Promise.all([
+                getDocs(collection(db, 'attendanceSessions')),
+                getDocs(collection(db, 'users')),
+                loadNameMapFromCSV(),
+            ]);
+
+            setNameMap(nameMapping);
+
+            const sessions = sessSnap.docs
+                .map((docSnap) => {
                     const data = docSnap.data();
                     const raw = data.date ?? data.createdAt;
                     const dateObj =
@@ -43,79 +64,73 @@ const AttendanceChart = () => {
                     };
                 })
                 .sort((a, b) => a.date - b.date);
-            setSessions(sessData);
 
-            const userSnap = await getDocs(collection(db, 'users'));
-            const userData = userSnap.docs.map(docSnap => ({
-                id: docSnap.id,
-                absences: docSnap.data().absences || 0,
-                attendance: docSnap.data().attendance || [],
-                ...docSnap.data(),
-            }));
-            setUsers(userData);
+            setSessions(sessions);
+
+            const users = userSnap.docs.map((docSnap) => {
+                const data = docSnap.data();
+                return {
+                    id: docSnap.id,
+                    username: data.username || docSnap.id,
+                    absences: data.absences || 0,
+                    attendance: data.attendance || [],
+                };
+            });
+
+            setUsers(users);
         };
 
         fetchAll();
     }, []);
 
     const resetAllAbsences = async () => {
-        const confirmReset = window.confirm("Are you sure you want to reset all users' absences to 0?");
-        if (!confirmReset) return;
-
+        if (!window.confirm("Reset all users' absences to 0?")) return;
         try {
             const userSnap = await getDocs(collection(db, 'users'));
             const batch = writeBatch(db);
 
-            userSnap.docs.forEach(doc => {
-                const userData = doc.data();
-                if (userData.absences !== 0) {
-                    batch.update(doc.ref, { absences: 0 });
+            userSnap.docs.forEach((docSnap) => {
+                if ((docSnap.data().absences || 0) !== 0) {
+                    batch.update(docSnap.ref, { absences: 0 });
                 }
             });
 
             await batch.commit();
-            alert("All users' absences have been reset to 0.");
+            alert('Absences reset successfully.');
             window.location.reload();
-        } catch (error) {
-            console.error("Error resetting absences:", error);
-            alert("Failed to reset absences. Please try again.");
+        } catch (err) {
+            console.error('Reset error:', err);
+            alert('Failed to reset absences.');
         }
     };
 
     const handleSessionEdit = async (user, sessionId) => {
         const adminUsername = localStorage.getItem('username') || 'Unknown Admin';
+        const existing = user.attendance.find((a) => a.startsWith(sessionId));
+        const defaultVal = existing?.includes('(Proxy)')
+            ? 'proxy'
+            : existing === sessionId
+                ? 'present'
+                : 'absent';
 
-        const currentStatus = user.attendance.find(a => a.startsWith(sessionId));
         const newStatus = prompt(
-            `Change attendance for ${user.username || user.id} on session ${sessionId}:\n\nType one of:\n- present\n- absent\n- proxy`,
-            currentStatus?.includes('(Proxy)')
-                ? 'proxy'
-                : currentStatus === sessionId
-                    ? 'present'
-                    : 'absent'
+            `Update attendance for ${user.username} on session ${sessionId}:\n- present\n- absent\n- proxy`,
+            defaultVal
         );
-
         if (!newStatus) return;
 
-        // Build new attendance array
-        let updatedAttendance = user.attendance.filter(a => !a.startsWith(sessionId));
-        if (newStatus.toLowerCase() === 'present') {
+        const updatedAttendance = user.attendance.filter((a) => !a.startsWith(sessionId));
+        if (newStatus === 'present') {
             updatedAttendance.push(sessionId);
-        } else if (newStatus.toLowerCase() === 'proxy') {
+        } else if (newStatus === 'proxy') {
             updatedAttendance.push(`${sessionId}(Proxy)`);
         }
 
-        // Recalculate absences:
-        const attendedSessions = new Set(
-            updatedAttendance.map(a => a.replace('(Proxy)', ''))
-        );
-        const recalculatedAbsences = sessions.filter(
-            s => !attendedSessions.has(s.id)
-        ).length;
+        const attended = new Set(updatedAttendance.map((a) => a.replace('(Proxy)', '')));
+        const recalculatedAbsences = sessions.filter((s) => !attended.has(s.id)).length;
 
         try {
-            const userRef = doc(db, 'users', user.id);
-            await updateDoc(userRef, {
+            await updateDoc(doc(db, 'users', user.id), {
                 attendance: updatedAttendance,
                 absences: recalculatedAbsences,
             });
@@ -126,12 +141,11 @@ const AttendanceChart = () => {
                 adminUsername,
                 sessionId,
                 timestamp: new Date().toISOString(),
-                description: `Admin (${adminUsername}) updated attendance for session ${sessionId} to "${newStatus}" for user ${user.username || user.id}. Total absences now: ${recalculatedAbsences}`,
+                description: `Admin (${adminUsername}) set ${user.username} to "${newStatus}" for session ${sessionId}`,
             });
 
-            // Reflect changes locally
-            setUsers(prev =>
-                prev.map(u =>
+            setUsers((prev) =>
+                prev.map((u) =>
                     u.id === user.id
                         ? {
                             ...u,
@@ -142,12 +156,18 @@ const AttendanceChart = () => {
                 )
             );
         } catch (err) {
-            console.error('Error editing session attendance:', err);
-            alert('Failed to update attendance.');
+            console.error('Failed to update:', err);
+            alert('Update failed.');
         }
     };
 
-    const formatDate = date =>
+    const resolveDisplayName = (username, fallback) => {
+        const cleanUsername = username?.toLowerCase();
+        const name = nameMap[cleanUsername];
+        return name ? `${name} (${username})` : fallback;
+    };
+
+    const formatDate = (date) =>
         date instanceof Date && !isNaN(date)
             ? date.toLocaleString('en-US', {
                 year: 'numeric',
@@ -161,13 +181,15 @@ const AttendanceChart = () => {
     return (
         <div className="attendance-container">
             <h2 className="attendance-title">Attendance Chart</h2>
+
             <button
                 className="admin-btn log-btn"
                 onClick={() => navigate('/edit-logs')}
-                style={{ float: 'none', marginBottom: '1rem', display: 'block', margin: '0 auto' }}
+                style={{ marginBottom: '1rem', display: 'block', margin: '0 auto' }}
             >
                 View Edit Logs
             </button>
+
             <button
                 className="admin-btn reset-btn"
                 onClick={resetAllAbsences}
@@ -175,10 +197,8 @@ const AttendanceChart = () => {
             >
                 Reset Absences
             </button>
-            <button
-                className="admin-btn back-btn"
-                onClick={() => navigate(-1)}
-            >
+
+            <button className="admin-btn back-btn" onClick={() => navigate(-1)}>
                 ← Back
             </button>
 
@@ -187,43 +207,50 @@ const AttendanceChart = () => {
                     <thead>
                     <tr>
                         <th>Name</th>
-                        {sessions.map(sess => (
-                            <th key={sess.id}>{formatDate(sess.date)}</th>
+                        {sessions.map((s) => (
+                            <th key={s.id}>{formatDate(s.date)}</th>
                         ))}
                     </tr>
                     </thead>
                     <tbody>
-                    {users.map(user => {
-                        let nameClass = '';
-                        if (user.absences <= 1) nameClass = 'absences-green';
-                        else if (user.absences === 2) nameClass = 'absences-yellow';
-                        else nameClass = 'absences-red';
+                    {users.map((user) => {
+                        const displayName = resolveDisplayName(user.username, user.username);
+                        const colorClass =
+                            user.absences <= 1
+                                ? 'absences-green'
+                                : user.absences === 2
+                                    ? 'absences-yellow'
+                                    : 'absences-red';
 
                         return (
                             <tr key={user.id}>
-                                <td className={`name-cell ${nameClass}`}>
-                                    {user.username || user.id} ({user.absences})
+                                <td className={`name-cell ${colorClass}`}>
+                                    {displayName} ({user.absences})
                                 </td>
-                                {sessions.map(sess => {
-                                    const attendanceValue = user.attendance.find(a => a.startsWith(sess.id));
-                                    const isProxy = attendanceValue?.includes('(Proxy)');
-                                    const present = attendanceValue === sess.id;
+                                {sessions.map((s) => {
+                                    const att = user.attendance.find((a) => a.startsWith(s.id));
+                                    const isProxy = att?.includes('(Proxy)');
+                                    const isPresent = att === s.id;
 
-                                    let statusText = 'Absent';
-                                    if (isProxy) statusText = 'Proxy';
-                                    else if (present) statusText = 'Present';
+                                    let status = 'Absent';
+                                    if (isProxy) status = 'Proxy';
+                                    else if (isPresent) status = 'Present';
 
-                                    const statusClass = isProxy ? 'proxy' : present ? 'present' : 'absent';
+                                    const className = isProxy
+                                        ? 'proxy'
+                                        : isPresent
+                                            ? 'present'
+                                            : 'absent';
 
                                     return (
                                         <td
-                                            key={sess.id}
-                                            className={statusClass}
-                                            onClick={() => handleSessionEdit(user, sess.id)}
-                                            style={{ cursor: 'pointer' }}
+                                            key={s.id}
+                                            className={className}
                                             title="Click to edit"
+                                            style={{ cursor: 'pointer' }}
+                                            onClick={() => handleSessionEdit(user, s.id)}
                                         >
-                                            {statusText}
+                                            {status}
                                         </td>
                                     );
                                 })}

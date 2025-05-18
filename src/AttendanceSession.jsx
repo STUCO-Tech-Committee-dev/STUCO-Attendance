@@ -116,7 +116,7 @@ const AttendanceSession = () => {
               endSession();
             }
           }}>
-            🛑 End Session
+            End Session
           </button>
           <button
             className="admin-btn"
@@ -127,7 +127,7 @@ const AttendanceSession = () => {
               }
             }}
           >
-            ❌ Abort Session
+            Abort Session
           </button>
         </div>
       ) : (
