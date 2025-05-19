@@ -18,10 +18,34 @@ const ProxyManagement = () => {
   const [approvedProxies, setApprovedProxies] = useState([]);
   const [view, setView] = useState("pending"); // 'pending' or 'approved'
 
+  const formatDateToEST = (createdAt) => {
+    const parsedDate =
+      typeof createdAt === "string" ? new Date(createdAt) : createdAt.toDate();
+    return parsedDate.toLocaleDateString("en-US", {
+      timeZone: "America/New_York",
+    });
+  };
+
+  const formatTimeToEST = (createdAt) => {
+    const parsedDate =
+      typeof createdAt === "string" ? new Date(createdAt) : createdAt.toDate();
+    return parsedDate.toLocaleTimeString("en-US", {
+      timeZone: "America/New_York",
+    });
+  };
+
   useEffect(() => {
     const loadProxyRequests = async () => {
       const snap = await getDocs(collection(db, "proxyRequests"));
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const data = snap.docs.map((d) => ({
+        id: d.id,
+        createdAt: d.data().createdAt,
+        date: d.data().date,
+        description: d.data().description,
+        proxyName: d.data().proxyName,
+        proxyingFor: d.data().proxyingFor,
+        sessionId: d.data().sessionId,
+      }));
 
       // Sort by date descending
       data.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -30,7 +54,15 @@ const ProxyManagement = () => {
 
     const loadApprovedProxies = async () => {
       const snap = await getDocs(collection(db, "approvedRequests"));
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const data = snap.docs.map((d) => ({
+        id: d.id,
+        createdAt: d.data().createdAt,
+        date: d.data().date,
+        description: d.data().description,
+        proxyName: d.data().proxyName,
+        proxyingFor: d.data().proxyingFor,
+        sessionId: d.data().sessionId,
+      }));
 
       // Sort by date descending
       data.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -43,47 +75,34 @@ const ProxyManagement = () => {
 
   const handleAccept = async (request) => {
     try {
-      // Check if a session is running
-      const sessionSnap = await getDocs(collection(db, "attendanceSessions"));
-      const sessions = sessionSnap.docs.map((docSnap) => docSnap.data());
-      const activeSession = sessions.find(
-        (session) => session.isActive // Assuming sessions have an `isActive` field
-      );
-
-      if (!activeSession) {
-        alert("No active session is running. Cannot accept proxy request.");
-        return;
-      }
-
-      const requestRef = doc(db, "proxyRequests", request.id);
-      const approvedRef = collection(db, "approvedRequests");
-      const userRef = doc(db, "users", request.userId); // Assuming `userId` is part of the request
-
-      // Update attendance to "proxy" and remove an absence
+      const userRef = doc(db, "users", request.proxyingFor); // Use proxyingFor field
       const userSnap = await getDocs(collection(db, "users"));
       const user = userSnap.docs
         .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
-        .find((u) => u.id === request.userId);
+        .find((u) => u.id === request.proxyingFor);
 
       if (!user) {
-        alert("User not found.");
+        alert("Elected member not found.");
         return;
       }
 
+      // Update attendance for the session
       const updatedAttendance = [
         ...user.attendance,
-        `${activeSession.id} (Proxy)`,
-      ];
-      const updatedAbsences = Math.max(0, user.absences - 1);
+        `${request.sessionId} proxy`,
+      ]; // Include session ID with "proxy"
 
       await updateDoc(userRef, {
         attendance: updatedAttendance,
-        absences: updatedAbsences,
+        absences: user.absences, // Do not add an absence
       });
 
-      // Add to approved requests and delete from pending requests
-      await addDoc(approvedRef, { ...request, approvedAt: serverTimestamp() });
-      await deleteDoc(requestRef);
+      // Move request to approvedRequests collection
+      await addDoc(collection(db, "approvedRequests"), {
+        ...request,
+        approvedAt: serverTimestamp(),
+      });
+      await deleteDoc(doc(db, "proxyRequests", request.id));
 
       setProxyRequests((prev) => prev.filter((r) => r.id !== request.id));
       setApprovedProxies((prev) => [
@@ -143,17 +162,19 @@ const ProxyManagement = () => {
             proxyRequests.map((request) => (
               <div key={request.id} className="proxy-request-bubble">
                 <p>
-                  <strong>Date:</strong>{" "}
-                  {new Date(request.date).toLocaleDateString()}
+                  <strong>Date:</strong> {formatDateToEST(request.createdAt)}
                 </p>
                 <p>
-                  <strong>Name:</strong> {request.name}
+                  <strong>Time:</strong> {formatTimeToEST(request.createdAt)}
                 </p>
                 <p>
-                  <strong>Username:</strong> {request.username}
+                  <strong>Proxy Name:</strong> {request.proxyName}
                 </p>
                 <p>
-                  <strong>Chosen Proxy:</strong> {request.proxy}
+                  <strong>Proxying For:</strong> {request.proxyingFor}
+                </p>
+                <p>
+                  <strong>Session ID:</strong> {request.sessionId}
                 </p>
                 <p>
                   <strong>Reason:</strong> {request.description}
@@ -188,17 +209,19 @@ const ProxyManagement = () => {
             approvedProxies.map((proxy) => (
               <div key={proxy.id} className="proxy-request-bubble">
                 <p>
-                  <strong>Date:</strong>{" "}
-                  {new Date(proxy.date).toLocaleDateString()}
+                  <strong>Date:</strong> {formatDateToEST(proxy.createdAt)}
                 </p>
                 <p>
-                  <strong>Name:</strong> {proxy.name}
+                  <strong>Time:</strong> {formatTimeToEST(proxy.createdAt)}
                 </p>
                 <p>
-                  <strong>Username:</strong> {proxy.username}
+                  <strong>Proxy Name:</strong> {proxy.proxyName}
                 </p>
                 <p>
-                  <strong>Chosen Proxy:</strong> {proxy.proxy}
+                  <strong>Proxying For:</strong> {proxy.proxyingFor}
+                </p>
+                <p>
+                  <strong>Session ID:</strong> {proxy.sessionId}
                 </p>
                 <p>
                   <strong>Reason:</strong> {proxy.description}

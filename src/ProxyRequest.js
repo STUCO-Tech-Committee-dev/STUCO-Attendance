@@ -1,48 +1,60 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // Added import
-import { db, auth } from "./firebase";
+import { useNavigate, useLocation } from "react-router-dom"; // Added import
+import { db } from "./firebase";
 import {
   collection,
-  getDocs,
   addDoc,
   serverTimestamp,
+  getDocs,
 } from "firebase/firestore";
 import "./AdminInterface.css";
 
 const ProxyRequest = () => {
   const navigate = useNavigate(); // Initialize navigate
+  const location = useLocation(); // Access location state
+  const sessionId = location.state?.sessionId; // Get session ID from QR scan
   const [date, setDate] = useState("");
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
-  const [proxy, setProxy] = useState("");
+  const [proxyName, setProxyName] = useState(""); // Updated field
+  const [electedMembers, setElectedMembers] = useState([]);
+  const [proxyingFor, setProxyingFor] = useState(""); // Dropdown selection
   const [description, setDescription] = useState("");
-  const [nonVotingMembers, setNonVotingMembers] = useState([]);
 
   useEffect(() => {
-    const fetchNonVotingMembers = async () => {
+    if (!sessionId) {
+      alert("Session ID is missing. Please scan the QR code again.");
+      navigate("/qr", { state: { isProxyRequest: true } }); // Redirect back to QR scanning
+    }
+  }, [sessionId, navigate]);
+
+  useEffect(() => {
+    const fetchElectedMembers = async () => {
       const snap = await getDocs(collection(db, "users"));
-      const members = snap.docs
-        .map((doc) => doc.id)
-        .filter((id) => id !== auth.currentUser.email.split("@")[0]); // Exclude current user
-      setNonVotingMembers(members);
+      const members = snap.docs.map((doc) => ({
+        id: doc.id,
+        name: doc.data().name,
+      }));
+      setElectedMembers(members);
     };
 
-    if (auth.currentUser) {
-      setUsername(auth.currentUser.email.split("@")[0]);
-      fetchNonVotingMembers();
-    }
+    fetchElectedMembers();
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!sessionId) {
+      alert("Session ID is missing. Please scan the QR code again.");
+      navigate("/");
+      return;
+    }
+
     try {
       await addDoc(collection(db, "proxyRequests"), {
         date,
-        name,
-        username,
-        proxy,
+        proxyName, // Ensure proxyName is included
+        proxyingFor, // Ensure proxyingFor is included
         description,
-        createdAt: serverTimestamp(), // Ensure consistency
+        sessionId, // Ensure sessionId is included
+        createdAt: serverTimestamp(),
       });
       alert("Proxy request submitted successfully!");
       navigate("/dashboard"); // Redirect after submission
@@ -54,13 +66,13 @@ const ProxyRequest = () => {
 
   return (
     <div className="admin-container">
-      <h2 className="admin-title">Proxy Request Form</h2>
+      <h2 className="admin-title">Proxy Submission Form</h2>
       <button
         className="admin-btn"
-        onClick={() => navigate("/dashboard")}
+        onClick={() => navigate("/")} // Ensure route matches App.js
         style={{ marginBottom: "1rem" }}
       >
-        ← Back to Dashboard
+        ← Back to Auth Page
       </button>
       <form className="proxy-form" onSubmit={handleSubmit}>
         <div className="input-group">
@@ -73,35 +85,31 @@ const ProxyRequest = () => {
           />
         </div>
         <div className="input-group">
-          <label>Name:</label>
+          <label>Your Name:</label>
           <input
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={proxyName}
+            onChange={(e) => setProxyName(e.target.value)}
             required
           />
         </div>
         <div className="input-group">
-          <label>Username:</label>
-          <input type="text" value={username} readOnly />
-        </div>
-        <div className="input-group">
-          <label>Chosen Proxy:</label>
+          <label>Who You Are Proxying For:</label>
           <select
-            value={proxy}
-            onChange={(e) => setProxy(e.target.value)}
+            value={proxyingFor}
+            onChange={(e) => setProxyingFor(e.target.value)}
             required
           >
-            <option value="">Select a proxy</option>
-            {nonVotingMembers.map((member) => (
-              <option key={member} value={member}>
-                {member}
+            <option value="">Select an elected member</option>
+            {electedMembers.map((member) => (
+              <option key={member.id} value={member.id}>
+                {member.name} ({member.id})
               </option>
             ))}
           </select>
         </div>
         <div className="input-group">
-          <label>Description/Reason:</label>
+          <label>Reason for Proxy:</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}

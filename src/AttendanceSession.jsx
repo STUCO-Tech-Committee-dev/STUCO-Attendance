@@ -86,10 +86,10 @@ const AttendanceSession = () => {
   if (!session) return <div>Loading…</div>;
 
   // helper to format Firestore Timestamp or raw number
-  const formatDate = ts =>
+  const formatDate = (ts) =>
     ts?.toDate
-      ? ts.toDate().toLocaleString()
-      : new Date(ts).toLocaleString();
+      ? ts.toDate().toLocaleString("en-US", { timeZone: "America/New_York" })
+      : new Date(ts).toLocaleString("en-US", { timeZone: "America/New_York" });
 
   return (
     <div className="admin-container">

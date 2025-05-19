@@ -208,6 +208,16 @@ const AuthPage = () => {
               </>
           )}
         </div>
+        {/* Add navigation to Proxy Request */}
+        <div style={{ marginTop: "16px" }}>
+          <button
+            className="admin-btn"
+            onClick={() => navigate("/qr", { state: { isProxyRequest: true } })} // Navigate to /qr with isProxyRequest flag
+            style={{ display: "block", margin: "0 auto" }}
+          >
+            Submit Proxy Request
+          </button>
+        </div>
       </div>
   );
 };

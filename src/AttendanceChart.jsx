@@ -9,6 +9,17 @@ const AttendanceChart = () => {
   const [users, setUsers] = useState([]);
   const [sessions, setSessions] = useState([]);
 
+  const formatDateSafely = (date) => {
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate)) return "Invalid Date";
+    return parsedDate.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone: "America/New_York",
+    });
+  };
+
   useEffect(() => {
     const storedAuth = localStorage.getItem('isAuthenticated');
     if (storedAuth !== 'true') {
@@ -32,11 +43,11 @@ const AttendanceChart = () => {
             : new Date(raw);
           return {
             id: docSnap.id,
-            date: dateObj,
+            date: isNaN(dateObj) ? null : dateObj, // Ensure invalid dates are null
             ...data
           };
         })
-        .sort((a, b) => a.date - b.date);
+        .sort((a, b) => (a.date && b.date ? a.date - b.date : 0)); // Sort safely
       setSessions(sessData);
 
       // 2️⃣ Fetch users
@@ -145,13 +156,7 @@ const AttendanceChart = () => {
               <th>Name</th>
               {sessions.map(sess => (
                 <th key={sess.id}>
-                  {sess.date instanceof Date && !isNaN(sess.date)
-                    ? sess.date.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                      })
-                    : 'Invalid Date'}
+                  {sess.date ? formatDateSafely(sess.date) : "Invalid Date"}
                 </th>
               ))}
             </tr>
@@ -186,7 +191,7 @@ const AttendanceChart = () => {
                   </td>
                   {sessions.map(sess => {
                     const attendanceValue = user.attendance.find(a => a.startsWith(sess.id));
-                    const isProxy = attendanceValue?.includes('(Proxy)');
+                    const isProxy = attendanceValue?.includes('proxy');
                     const present = attendanceValue === sess.id;
 
                     return (

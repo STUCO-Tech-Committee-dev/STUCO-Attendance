@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import QrScanner from 'qr-scanner';
 import { auth, db } from './firebase';
 import { doc, getDoc, updateDoc, arrayUnion, query, where, collection, getDocs } from 'firebase/firestore';
@@ -11,13 +11,16 @@ const ScanQRCode = () => {
   const scannerRef = useRef(null);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation(); // Access location state
+  const isProxyRequest = location.state?.isProxyRequest || false; // Check if it's a proxy request
 
   // redirect if not logged in
   useEffect(() => {
-    if (!auth.currentUser) {
+    if (!auth.currentUser && !isProxyRequest) {
+      // Redirect to the AuthPage only if the user is not logged in and it's not a proxy request
       navigate('/');
     }
-  }, [navigate]);
+  }, [navigate, isProxyRequest]);
 
   // initialize scanner
   useEffect(() => {
@@ -26,56 +29,66 @@ const ScanQRCode = () => {
     scannerRef.current = new QrScanner(
       videoRef.current,
       async result => {
-        const sessionId = result.data.trim();
-        const sessRef = doc(db, 'attendanceSessions', sessionId);
-        const sessSnap = await getDoc(sessRef);
-        if (!sessSnap.exists() || !sessSnap.data().open) {
-          setError('No active session with that code.');
-          return;
+        try {
+          const sessionId = result.data.trim(); // Ensure sessionId is properly extracted
+          const sessRef = doc(db, 'attendanceSessions', sessionId);
+          const sessSnap = await getDoc(sessRef);
+
+          if (!sessSnap.exists() || !sessSnap.data().open) {
+            setError('No active session with that code.');
+            return;
+          }
+
+          if (isProxyRequest) {
+            // Navigate to ProxyRequest form with sessionId
+            scannerRef.current.stop();
+            navigate('/proxy-request', { state: { sessionId } });
+          } else {
+            // Handle attendance logic
+            const sessionData = sessSnap.data();
+            if (!sessionData.createdAt) {
+              setError('Session creation date is missing or invalid.');
+              return;
+            }
+
+            const sessionDate = sessionData.createdAt
+              .toDate()
+              .toLocaleDateString("en-US", { timeZone: "America/New_York" });
+            const email = auth.currentUser.email;
+            const username = email.split('@')[0];
+
+            const proxyQuery = query(
+              collection(db, 'proxyRequests'),
+              where('proxy', '==', username),
+              where('date', '==', sessionDate)
+            );
+            const proxySnap = await getDocs(proxyQuery);
+
+            if (!proxySnap.empty) {
+              const proxyRequest = proxySnap.docs[0].data();
+              const originalUserRef = doc(db, 'users', proxyRequest.username);
+
+              await updateDoc(originalUserRef, {
+                attendance: arrayUnion(`${sessionId} (Proxy)`)
+              });
+            } else {
+              const userRef = doc(db, 'users', username);
+              await updateDoc(userRef, {
+                attendance: arrayUnion(sessionId)
+              });
+            }
+
+            scannerRef.current.stop();
+            navigate('/dashboard');
+          }
+        } catch (err) {
+          console.error('Error processing QR code:', err);
+          setError('Failed to process QR code. Please try again.');
         }
-
-        const sessionData = sessSnap.data();
-        if (!sessionData.createdAt) {
-          setError('Session creation date is missing or invalid.');
-          return;
-        }
-
-        // Normalize the session date to YYYY-MM-DD format
-        const sessionDate = sessionData.createdAt.toDate().toISOString().split('T')[0];
-
-        const email = auth.currentUser.email;
-        const username = email.split('@')[0];
-
-        // Check if the user is a proxy
-        const proxyQuery = query(
-          collection(db, 'proxyRequests'),
-          where('proxy', '==', username),
-          where('date', '==', sessionDate) // Match normalized session date
-        );
-        const proxySnap = await getDocs(proxyQuery);
-
-        if (!proxySnap.empty) {
-          const proxyRequest = proxySnap.docs[0].data();
-          const originalUserRef = doc(db, 'users', proxyRequest.username);
-
-          // Add "(Proxy)" to the original user's attendance
-          await updateDoc(originalUserRef, {
-            attendance: arrayUnion(`${sessionId} (Proxy)`)
-          });
-        } else {
-          // Add session ID to the current user's attendance
-          const userRef = doc(db, 'users', username);
-          await updateDoc(userRef, {
-            attendance: arrayUnion(sessionId)
-          });
-        }
-
-        scannerRef.current.stop();
-        navigate('/dashboard');
       },
       {
-        onDecodeError: err => {
-          // decode errors (i.e. no qr found) ignored
+        onDecodeError: () => {
+          // Ignore decode errors (e.g., no QR code found)
         },
         highlightScanRegion: true,
         highlightCodeOutline: true,
@@ -87,21 +100,23 @@ const ScanQRCode = () => {
     scannerRef.current
       .start()
       .catch(err => {
-        console.error(err);
+        console.error('Camera error:', err);
         setError('Camera blocked or not accessible. Please enable camera permissions.');
       });
 
     return () => {
       scannerRef.current.stop();
     };
-  }, [navigate]);
+  }, [navigate, isProxyRequest]);
 
   return (
     <div className="admin-container">
       <button className="admin-btn" style={{ marginBottom: '1rem' }} onClick={() => navigate(-1)}>
         ← Back
       </button>
-      <h2 className="admin-title">Scan QR Code to Check In</h2>
+      <h2 className="admin-title">
+        {isProxyRequest ? 'Scan QR Code to Submit Proxy Request' : 'Scan QR Code to Check In'}
+      </h2>
       <div className="qr-reader">
         <video ref={videoRef} className="qr-video" />
         <div ref={overlayRef} className="qr-box" />
