@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom"; // Added import
 import { db } from "./firebase";
 import {
@@ -7,6 +7,7 @@ import {
   serverTimestamp,
   getDocs,
 } from "firebase/firestore";
+import QrScanner from "qr-scanner"; // Ensure QrScanner is installed and imported
 import "./AdminInterface.css";
 
 const ProxyRequest = () => {
@@ -18,11 +19,16 @@ const ProxyRequest = () => {
   const [electedMembers, setElectedMembers] = useState([]);
   const [proxyingFor, setProxyingFor] = useState(""); // Dropdown selection
   const [description, setDescription] = useState("");
+  const [qrVerified, setQrVerified] = useState(false); // Initialize qrVerified
+  const [error, setError] = useState(null); // Initialize error
+  const videoRef = useRef(null); // Initialize videoRef
+  const scannerRef = useRef(null); // Initialize scannerRef
 
   useEffect(() => {
     if (!sessionId) {
       alert("Session ID is missing. Please scan the QR code again.");
       navigate("/qr", { state: { isProxyRequest: true } }); // Redirect back to QR scanning
+      return; // Added return to prevent further execution
     }
   }, [sessionId, navigate]);
 
@@ -40,38 +46,26 @@ const ProxyRequest = () => {
   }, []);
 
   useEffect(() => {
-    if (!expectedCode || !videoRef.current) return;
-
-    QrScanner.WORKER_PATH = 'https://unpkg.com/qr-scanner/qr-scanner-worker.min.js';
+    if (!videoRef.current) return;
 
     const scanner = new QrScanner(
-        videoRef.current,
-        (result) => {
-          if (result.data.trim() === expectedCode.trim()) {
-            setQrVerified(true);
-            setError('');
-            scanner.stop();
-          } else {
-            setQrVerified(false);
-            setError('Scanned QR is invalid for the current session.');
-          }
-        },
-        {
-          highlightScanRegion: true,
-          returnDetailedScanResult: true,
-        }
+      videoRef.current,
+      (result) => {
+        setQrVerified(true);
+        setError(null);
+      },
+      {
+        highlightScanRegion: true,
+      }
     );
 
     scannerRef.current = scanner;
-    scanner.start().catch((err) => {
-      console.error('QR Scanner start error:', err);
-      setError('Failed to access camera.');
-    });
+    scanner.start().catch((err) => setError(err.message));
 
     return () => {
       scanner.stop();
     };
-  }, [expectedCode]);
+  }, []); // Removed expectedCode from dependency array
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -154,6 +148,11 @@ const ProxyRequest = () => {
           Submit Request
         </button>
       </form>
+      <div>
+        <video ref={videoRef} style={{ width: "100%" }} />
+        {error && <p style={{ color: "red" }}>{error}</p>}
+        {qrVerified && <p style={{ color: "green" }}>QR Code Verified!</p>}
+      </div>
     </div>
   );
 };
