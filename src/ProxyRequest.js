@@ -39,6 +39,40 @@ const ProxyRequest = () => {
     fetchElectedMembers();
   }, []);
 
+  useEffect(() => {
+    if (!expectedCode || !videoRef.current) return;
+
+    QrScanner.WORKER_PATH = 'https://unpkg.com/qr-scanner/qr-scanner-worker.min.js';
+
+    const scanner = new QrScanner(
+        videoRef.current,
+        (result) => {
+          if (result.data.trim() === expectedCode.trim()) {
+            setQrVerified(true);
+            setError('');
+            scanner.stop();
+          } else {
+            setQrVerified(false);
+            setError('Scanned QR is invalid for the current session.');
+          }
+        },
+        {
+          highlightScanRegion: true,
+          returnDetailedScanResult: true,
+        }
+    );
+
+    scannerRef.current = scanner;
+    scanner.start().catch((err) => {
+      console.error('QR Scanner start error:', err);
+      setError('Failed to access camera.');
+    });
+
+    return () => {
+      scanner.stop();
+    };
+  }, [expectedCode]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!sessionId) {
