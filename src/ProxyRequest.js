@@ -1,118 +1,163 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // Added import
-import { db, auth } from "./firebase";
+import React, { useEffect, useRef, useState } from 'react';
+import QrScanner from 'qr-scanner';
 import {
   collection,
-  getDocs,
   addDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-import "./AdminInterface.css";
+  Timestamp,
+  getDocs,
+  query,
+  where,
+} from 'firebase/firestore';
+import { db } from './firebase';
+import './StudentInterface.css';
 
-const ProxyRequest = () => {
-  const navigate = useNavigate(); // Initialize navigate
-  const [date, setDate] = useState("");
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
-  const [proxy, setProxy] = useState("");
-  const [description, setDescription] = useState("");
-  const [nonVotingMembers, setNonVotingMembers] = useState([]);
+const ProxyRequest = ({ embeddedFromHome = false }) => {
+  const videoRef = useRef(null);
+  const scannerRef = useRef(null);
+  const [qrVerified, setQrVerified] = useState(false);
+  const [expectedCode, setExpectedCode] = useState(null);
+  const [requester, setRequester] = useState('');
+  const [delegate, setDelegate] = useState('');
+  const [reason, setReason] = useState('');
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchNonVotingMembers = async () => {
-      const snap = await getDocs(collection(db, "users"));
-      const members = snap.docs
-        .map((doc) => doc.id)
-        .filter((id) => id !== auth.currentUser.email.split("@")[0]); // Exclude current user
-      setNonVotingMembers(members);
+    const fetchQRCode = async () => {
+      try {
+        const q = query(collection(db, 'attendanceSessions'), where('open', '==', true));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const sessionData = querySnapshot.docs[0].data();
+          setExpectedCode(sessionData.qrCode || sessionData.code || '');
+        }
+      } catch (err) {
+        console.error('Error fetching QR code:', err);
+        setError('Could not fetch QR code.');
+      }
     };
 
-    if (auth.currentUser) {
-      setUsername(auth.currentUser.email.split("@")[0]);
-      fetchNonVotingMembers();
-    }
+    fetchQRCode();
   }, []);
+
+  useEffect(() => {
+    if (!expectedCode || !videoRef.current) return;
+
+    QrScanner.WORKER_PATH = 'https://unpkg.com/qr-scanner/qr-scanner-worker.min.js';
+
+    const scanner = new QrScanner(
+        videoRef.current,
+        (result) => {
+          if (result.data.trim() === expectedCode.trim()) {
+            setQrVerified(true);
+            setError('');
+            scanner.stop();
+          } else {
+            setQrVerified(false);
+            setError('Scanned QR is invalid for the current session.');
+          }
+        },
+        {
+          highlightScanRegion: true,
+          returnDetailedScanResult: true,
+        }
+    );
+
+    scannerRef.current = scanner;
+    scanner.start().catch((err) => {
+      console.error('QR Scanner start error:', err);
+      setError('Failed to access camera.');
+    });
+
+    return () => {
+      scanner.stop();
+    };
+  }, [expectedCode]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSuccess('');
+    setError('');
+
+    if (!qrVerified) {
+      setError('You must scan a valid QR code before submitting.');
+      return;
+    }
+
+    if (!requester || !delegate || !reason) {
+      setError('All fields are required.');
+      return;
+    }
+
     try {
-      await addDoc(collection(db, "proxyRequests"), {
-        date,
-        name,
-        username,
-        proxy,
-        description,
-        createdAt: serverTimestamp(), // Ensure consistency
+      await addDoc(collection(db, 'proxies'), {
+        requester: requester.trim().toLowerCase(),
+        delegate: delegate.trim().toLowerCase(),
+        reason: reason.trim(),
+        timestamp: Timestamp.now(),
       });
-      alert("Proxy request submitted successfully!");
-      navigate("/dashboard"); // Redirect after submission
-    } catch (error) {
-      console.error("Error submitting proxy request:", error);
-      alert("Failed to submit proxy request.");
+      setSuccess('Proxy request submitted successfully!');
+      setRequester('');
+      setDelegate('');
+      setReason('');
+      setQrVerified(false);
+    } catch (err) {
+      setError('Error submitting proxy: ' + err.message);
     }
   };
 
   return (
-    <div className="admin-container">
-      <h2 className="admin-title">Proxy Request Form</h2>
-      <button
-        className="admin-btn"
-        onClick={() => navigate("/dashboard")}
-        style={{ marginBottom: "1rem" }}
-      >
-        ← Back to Dashboard
-      </button>
-      <form className="proxy-form" onSubmit={handleSubmit}>
-        <div className="input-group">
-          <label>Date of Meeting:</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-          />
-        </div>
-        <div className="input-group">
-          <label>Name:</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
-        <div className="input-group">
-          <label>Username:</label>
-          <input type="text" value={username} readOnly />
-        </div>
-        <div className="input-group">
-          <label>Chosen Proxy:</label>
-          <select
-            value={proxy}
-            onChange={(e) => setProxy(e.target.value)}
-            required
-          >
-            <option value="">Select a proxy</option>
-            {nonVotingMembers.map((member) => (
-              <option key={member} value={member}>
-                {member}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="input-group">
-          <label>Description/Reason:</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          />
-        </div>
-        <button type="submit" className="admin-btn">
-          Submit Request
-        </button>
-      </form>
-    </div>
+      <div className="student-container">
+        {!embeddedFromHome && <h2 className="student-title">Submit a Proxy Request</h2>}
+
+        {!qrVerified && expectedCode ? (
+            <div>
+              <p>Scan the QR code to proceed:</p>
+              <video ref={videoRef} style={{ width: '100%', maxWidth: '500px' }} />
+              {error && <p className="error">{error}</p>}
+            </div>
+        ) : qrVerified ? (
+            <form className="vote-form" onSubmit={handleSubmit}>
+              <div className="input-group">
+                <label>Your Username (requester)</label>
+                <input
+                    type="text"
+                    value={requester}
+                    onChange={(e) => setRequester(e.target.value)}
+                    required
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Who is Voting for You (delegate)</label>
+                <input
+                    type="text"
+                    value={delegate}
+                    onChange={(e) => setDelegate(e.target.value)}
+                    required
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Reason for Proxy</label>
+                <textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    required
+                />
+              </div>
+
+              {error && <div className="error">{error}</div>}
+              {success && <div className="success">{success}</div>}
+
+              <button type="submit" className="admin-btn">
+                Submit Proxy
+              </button>
+            </form>
+        ) : (
+            !expectedCode && <p>No open attendance session or QR code found.</p>
+        )}
+      </div>
   );
 };
 
