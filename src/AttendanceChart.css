@@ -1,64 +1,146 @@
+/* Container */
 .attendance-container {
-    max-width: 900px;
-    margin: 2rem auto;
-    padding: 1.5rem;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  }
-  
-  .attendance-title {
-    text-align: center;
-    color: #292a2b;
-    margin-bottom: 1rem;
-    font-size: 1.75rem;
-  }
-  
-  .attendance-table-wrapper {
-    overflow-x: auto;
-    margin-top: 1rem;
-  }
-  
-  .attendance-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: inherit;
-  }
-  
-  .attendance-table th,
-  .attendance-table td {
-    border: 1px solid #ccc;
-    padding: 0.5rem;
-    text-align: center;
-  }
-  
-  .attendance-table th {
-    background-color: #f4f4f4;
-    font-weight: 600;
-  }
-  
-  .name-cell {
-    text-align: left;
-    font-weight: 500;
-  }
-  
-  /* present = green, absent = red */
-  .present {
-    background-color: #c8e6c9;
-    color: #256029;
-    font-weight: bold;
-  }
-  
-  .absent {
-    background-color: #ffcdd2;
-    color: #9c0000;
-    font-weight: bold;
-  }
-  
-  /* Color-code the name cell based on absences */
-.absences-green { color: #28a745; }   /* green */
-.absences-yellow { color: #ffc107; }  /* yellow */
-.absences-red { color: #dc3545; }     /* red */
+  max-width: 1000px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
 
-/* Optional: ensure the name-cell retains any existing styles */
-.name-cell { font-weight: bold; /* or your preferred styles */ }
+/* Title */
+.attendance-title {
+  text-align: center;
+  color: #212529;
+  margin-bottom: 1.5rem;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+/* Table wrapper for scrolling */
+.attendance-table-wrapper {
+  overflow-x: auto;
+  margin-top: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: inset 0 0 0 1px #e0e0e0;
+}
+
+/* Table layout */
+.attendance-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+/* Header styling */
+.attendance-table th {
+  background-color: #f9fafb;
+  color: #333;
+  font-weight: 600;
+  padding: 0.75rem;
+  border-bottom: 2px solid #dee2e6;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Cell styling */
+.attendance-table td {
+  padding: 0.6rem;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+/* Name cell */
+.name-cell {
+  text-align: left;
+  font-weight: 600;
+  color: #212529;
+  white-space: nowrap;
+}
+
+/* Name cell color-coded by absence level */
+.absences-green { color: #28a745; }
+.absences-yellow { color: #ffc107; }
+.absences-red { color: #dc3545; }
+
+/* Attendance status styles */
+.present {
+  background-color: #d4edda;
+  color: #256029;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+.absent {
+  background-color: #f8d7da;
+  color: #842029;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+.proxy {
+  background-color: #fff3cd;
+  color: #856404;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+/* Dropdown attendance select */
+.select-attendance {
+  padding: 4px 8px;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  font-weight: 500;
+}
+
+.select-attendance.present {
+  background-color: #e6f4ea;
+  color: #1e7e34;
+}
+
+.select-attendance.absent {
+  background-color: #fdecea;
+  color: #a71d2a;
+}
+
+.select-attendance.proxy {
+  background-color: #fff8e1;
+  color: #a67c00;
+}
+
+/* Edit button inside name cell */
+.edit-btn {
+  margin-left: 0.5rem;
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.edit-btn:hover {
+  color: #0056b3;
+}
+
+/* Admin buttons - all red */
+.admin-btn {
+  padding: 0.6rem 1.2rem;
+  margin: 0.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: #dc3545;
+  color: #fff;
+  transition: background-color 0.3s ease;
+}
+
+.admin-btn:hover {
+  background-color: #c82333;
+}
