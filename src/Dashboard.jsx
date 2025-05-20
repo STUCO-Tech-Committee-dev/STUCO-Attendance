@@ -124,13 +124,6 @@ const Dashboard = () => {
       <div style={{ marginTop: '20px' }}>
         <button
           className="admin-btn"
-          onClick={() => navigate('/proxy-request')}
-          style={{ marginBottom: '1rem' }}
-        >
-          Request Proxy
-        </button>
-        <button
-          className="admin-btn"
           onClick={() => navigate('/qr')}
           disabled={!hasOpenSession}
           title={

@@ -12,8 +12,7 @@ const ScanQRCode = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation(); // Access location state
-  const isProxyRequest = location.state?.isProxyRequest || false; // Check if it's a proxy request
-
+  const isProxyRequest = Boolean(location.state?.isProxyRequest);
   // redirect if not logged in
   useEffect(() => {
     if (!auth.currentUser && !isProxyRequest) {
