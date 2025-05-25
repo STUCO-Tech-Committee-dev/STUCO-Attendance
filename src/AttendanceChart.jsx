@@ -120,19 +120,25 @@ const AttendanceChart = () => {
     if (value === 'present') updatedAttendance.push(sessionId);
     if (value === 'proxy') updatedAttendance.push(`${sessionId} proxy`);
 
-    // Calculate absences
+    // Recalculate absences
     const totalSessions = sessions.length;
     const attendedSessions = updatedAttendance.filter(a =>
-        a === sessionId || a === `${sessionId} proxy`
-    ).length;
-    const actualAbsences = totalSessions - updatedAttendance.filter(a =>
         sessions.some(s => a.startsWith(s.id))
     ).length;
+    const actualAbsences = totalSessions - attendedSessions;
 
     try {
       await updateDoc(doc(db, 'users', userId), {
         attendance: updatedAttendance,
         absences: actualAbsences
+      });
+
+      await addDoc(collection(db, 'manualEdits'), {
+        userId,
+        username: user.username || "Unknown",
+        adminUsername: localStorage.getItem('username') || 'Unknown Admin',
+        timestamp: new Date().toISOString(),
+        description: `Changed attendance for session ${sessionId} to ${value}`
       });
 
       setUsers(prev =>

@@ -6,7 +6,7 @@ import {
   getDoc,
   collection,
   getDocs,
-  writeBatch,
+  writeBatch, addDoc,
 } from 'firebase/firestore';
 import { QRCodeCanvas as QRCode } from 'qrcode.react';
 import { db } from './firebase';
@@ -31,15 +31,13 @@ const AttendanceSession = () => {
     loadSession();
   }, [sessionId, navigate]);
 
-  // end session: close it, and update every user's absences
   const endSession = async () => {
     const batch = writeBatch(db);
+    const edits = [];
 
-    // close the session
     const sessRef = doc(db, 'attendanceSessions', sessionId);
     batch.update(sessRef, { open: false });
 
-    // fetch all users
     const usersSnap = await getDocs(collection(db, 'users'));
     usersSnap.forEach(userDoc => {
       const data = userDoc.data();
@@ -47,14 +45,27 @@ const AttendanceSession = () => {
       const currentAbsences = data.absences || 0;
       const newAbsences = wasPresent ? currentAbsences : currentAbsences + 1;
 
+      if (!wasPresent) {
+        edits.push({
+          userId: userDoc.id,
+          username: data.username || "Unknown",
+          adminUsername: localStorage.getItem('username') || 'System',
+          timestamp: new Date().toISOString(),
+          description: `Marked absent for session ${sessionId}. Absences incremented to ${newAbsences}`
+        });
+      }
+
       const userRef = doc(db, 'users', userDoc.id);
       batch.update(userRef, { absences: newAbsences });
     });
 
-    // commit batch
     await batch.commit();
 
-    // update UI
+    // Log all absences from this session
+    for (const edit of edits) {
+      await addDoc(collection(db, 'manualEdits'), edit);
+    }
+
     setSession(prev => ({ ...prev, open: false }));
   };
 

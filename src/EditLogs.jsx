@@ -12,12 +12,15 @@ const EditLogs = () => {
     const fetchLogs = async () => {
       try {
         const logsSnap = await getDocs(collection(db, 'manualEdits'));
-        const logsData = logsSnap.docs.map(docSnap => docSnap.data());
+        const logsData = logsSnap.docs
+            .map(docSnap => docSnap.data())
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         setLogs(logsData);
       } catch (error) {
         console.error("Error fetching edit logs:", error);
       }
     };
+
 
     fetchLogs();
   }, []);
