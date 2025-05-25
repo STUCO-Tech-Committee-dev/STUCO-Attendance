@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth, db } from './firebase';
 import membersCSV from './ALL_ELECTED.csv';
 import './StudentInterface.css';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 const AuthPage = () => {
   const [mode, setMode] = useState('login');
@@ -109,31 +110,22 @@ const AuthPage = () => {
               disabled={!!success}
             />
           </div>
-          <div className="input-group" style={{ position: 'relative' }}>
+          <div className="input-group" style={{position: 'relative'}}>
             <label>Password</label>
             <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={!!success}
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={!!success}
             />
-            <span
-              onClick={() => setShowPassword((v) => !v)}
-              style={{
-                position: 'absolute',
-                right: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                cursor: 'pointer',
-              }}
-            >
-              {showPassword ? '🙈' : '👁️'}
+            <span onClick={() => setShowPassword(prev => !prev)} style={{cursor: 'pointer'}}>
+              {showPassword ? <FaEyeSlash/> : <FaEye/>}
             </span>
           </div>
           {mode === 'signup' && (
-            <div className="input-group" style={{ position: 'relative' }}>
-              <label>Confirm Password</label>
+              <div className="input-group" style={{position: 'relative'}}>
+                <label>Confirm Password</label>
               <input
                 type={showConfirm ? 'text' : 'password'}
                 value={confirmPassword}
