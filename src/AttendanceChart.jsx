@@ -16,16 +16,19 @@ const AttendanceChart = () => {
   const [users, setUsers] = useState([]);
   const [sessions, setSessions] = useState([]);
 
-  const formatDateSafely = (date) => {
-    const parsedDate = new Date(date);
-    if (isNaN(parsedDate)) return "Invalid Date";
-    return parsedDate.toLocaleDateString("en-US", {
+  const formatDateSafely = (dateStr) => {
+    // Handle "YYYY-MM-DD" without time zone shift
+    const [year, month, day] = dateStr.split("-");
+    const localDate = new Date(Number(year), Number(month) - 1, Number(day));
+
+    return localDate.toLocaleDateString("en-US", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
-      timeZone: "America/New_York",
+      timeZone: "America/New_York", // Optional, helps ensure consistency
     });
   };
+
 
   useEffect(() => {
     const storedAuth = localStorage.getItem('isAuthenticated');
